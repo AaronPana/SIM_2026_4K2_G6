@@ -1,21 +1,26 @@
-import { expNeg, uniforme, rungeKutta } from './utils.js';
+import {
+  expNeg,
+  uniforme,
+  rungeKutta,
+  tiempoLecturaInstalaciones,
+} from "./utils.js";
 
 // ─── Constantes por defecto ─────────────────────────────────────────────────
 export const DEFAULT_PARAMS = {
-  mediaLlegada: 4,         // min entre llegadas
+  mediaLlegada: 4, // min entre llegadas
   pctPideLibro: 0.45,
   pctDevuelve: 0.45,
   // pctConsulta = 0.10 (el resto)
-  mediaPrestamo: 6,        // exp neg
-  devolucionMin: 1.5,      // uniforme 2±0.5 → [1.5, 2.5]
+  mediaPrestamo: 6, // exp neg
+  devolucionMin: 1.5, // uniforme 2±0.5 → [1.5, 2.5]
   devolucionMax: 2.5,
   meticulosidadMin: 2,
   meticulosidadMax: 36,
   hRK: 0.1,
-  pctSeRetira: 0.60,
+  pctSeRetira: 0.6,
   mediaLecturaInstalaciones: 30, // exp neg
   capacidadMax: 20,
-  tiempoMaximo: 9999999,   // minutos máx (se usa la iteración como límite)
+  tiempoMaximo: 9999999, // minutos máx (se usa la iteración como límite)
   maxIteraciones: 100000,
 };
 
@@ -49,22 +54,42 @@ export function ejecutarSimulacion(params) {
   // Próximas salidas de lectores se manejan como eventos
   // Usaremos una lista de eventos para lectores + fin atención
 
-  // Contadores para métricas
+  // Contadores para métricas obligatorias
   let totalPersonas = 0;
   let personasCerrada = 0;
   let sumaTiemposPermanencia = 0;
   let personasFinalizadas = 0;
 
-  // Estadísticas adicionales
+  // Estadísticas adicionales — grupo 6
+  // (1) % ocupación Empleado 1
+  let tiempoOcupadoEmpleado1 = 0;
+  let ultimoCambioEstadoEmpleado1 = 0; // reloj en que E1 pasó a ocupado
+
+  // (2) Cantidad promedio de clientes en cola  →  sumaTiemposEnCola / relojFinal
+  //     Cada vez que cambia el largo de cola se acumula: largoActual * deltaT
+  let sumaTiemposEnCola = 0;
+  let ultimoCambioLargoCola = 0;
+  let largoCola = 0; // largo actual de la cola (se mantiene sincronizado)
+
+  // (3) Tiempo máximo de permanencia en cola
+  let tiempoMaxEsperaEnCola = 0;
+
+  // (4) Tiempo mínimo de permanencia en la biblioteca
+  let tiempoMinPermanenciaEnBiblioteca = Infinity;
+
+  // (5) Cantidad de personas que se quedan a leer
+  let totalSeQuedaronALeer = 0;
+
+  // (6) Promedio de tiempo de ocio del Empleado 2
+  //     ocio E2 = tiempo total simulación − tiempo ocupado E2
+  let tiempoOcupadoEmpleado2 = 0;
+  let ultimoCambioEstadoEmpleado2 = 0;
+
+  // Contadores auxiliares (para métricas internas, no expuestos como estadísticas)
   let totalPidieronLibro = 0;
   let totalDevolvieron = 0;
   let totalConsultas = 0;
-  let totalSeQuedaronALeer = 0;
   let totalSeRetiraron = 0;
-  let tiempoTotalCola = 0;         // suma de esperas en cola
-  let personasQueFueronACola = 0;
-  let veces20personas = 0;         // cuántas veces se llegó a 20
-  let maxPersonasSimultaneas = 0;
 
   // ─── Registro de personas (para permanencia) ─────────────────────────
   // Map id -> { llegada, salida }
@@ -76,25 +101,53 @@ export function ejecutarSimulacion(params) {
 
   // ─── Funciones auxiliares ─────────────────────────────────────────────
 
+  // Registra cuánto tiempo estuvo ocupado un empleado hasta el momento actual.
+  // Se llama cada vez que el estado de un empleado cambia (pasa a ocupado o a libre).
+  function acumularTiempoOcupacionEmpleado(empleadoId) {
+    if (empleadoId === 1) {
+      if (empleados[0].atendiendo !== null) {
+        tiempoOcupadoEmpleado1 += reloj - ultimoCambioEstadoEmpleado1;
+      }
+      ultimoCambioEstadoEmpleado1 = reloj;
+    } else {
+      if (empleados[1].atendiendo !== null) {
+        tiempoOcupadoEmpleado2 += reloj - ultimoCambioEstadoEmpleado2;
+      }
+      ultimoCambioEstadoEmpleado2 = reloj;
+    }
+  }
+
+  // Registra el área bajo la curva del largo de cola (largo × deltaT).
+  // Se llama cada vez que el largo de cola cambia.
+  function acumularTiempoEnCola() {
+    const delta = reloj - ultimoCambioLargoCola;
+    sumaTiemposEnCola += largoCola * delta;
+    ultimoCambioLargoCola = reloj;
+  }
+
   function empladoLibre() {
-    return empleados.find(e => e.libreEn <= reloj && e.atendiendo === null);
+    return empleados.find((e) => e.libreEn <= reloj && e.atendiendo === null);
   }
 
   function tipoLlegada() {
     const r = Math.random();
-    if (r < P.pctPideLibro) return { tipo: 'PIDE_LIBRO', rnd: r };
-    if (r < P.pctPideLibro + P.pctDevuelve) return { tipo: 'DEVUELVE', rnd: r };
-    return { tipo: 'CONSULTA', rnd: r };
+    if (r < P.pctPideLibro) return { tipo: "PIDE_LIBRO", rnd: r };
+    if (r < P.pctPideLibro + P.pctDevuelve) return { tipo: "DEVUELVE", rnd: r };
+    return { tipo: "CONSULTA", rnd: r };
   }
 
   function calcularTiempoAtencion(tipo, personaId) {
-    let duracion, rndDur, tablaRK = null, meticulosidad = null, rndMet = null;
+    let duracion,
+      rndDur,
+      tablaRK = null,
+      meticulosidad = null,
+      rndMet = null;
 
-    if (tipo === 'PIDE_LIBRO') {
+    if (tipo === "PIDE_LIBRO") {
       const res = expNeg(P.mediaPrestamo);
       duracion = res.valor;
       rndDur = res.rnd;
-    } else if (tipo === 'DEVUELVE') {
+    } else if (tipo === "DEVUELVE") {
       const res = uniforme(P.devolucionMin, P.devolucionMax);
       duracion = res.valor;
       rndDur = res.rnd;
@@ -113,9 +166,11 @@ export function ejecutarSimulacion(params) {
   }
 
   function iniciarAtencion(empleado, persona) {
-    const { duracion, rndDur, tablaRK, meticulosidad, rndMet } = calcularTiempoAtencion(
-      persona.tipo, persona.id
-    );
+    const { duracion, rndDur, tablaRK, meticulosidad, rndMet } =
+      calcularTiempoAtencion(persona.tipo, persona.id);
+
+    // Registrar ocupación antes de cambiar estado
+    acumularTiempoOcupacionEmpleado(empleado.id);
 
     empleado.atendiendo = persona.id;
     empleado.libreEn = reloj + duracion;
@@ -125,72 +180,82 @@ export function ejecutarSimulacion(params) {
     persona.tablaRK = tablaRK;
     persona.meticulosidad = meticulosidad;
     persona.rndMet = rndMet;
-    persona.tiempoEspera = reloj - persona.llegada;
-    tiempoTotalCola += persona.tiempoEspera;
+
+    // Calcular tiempo de espera en cola de esta persona
+    const tiempoEsperaActual =
+      reloj - (persona.llegadaACola ?? persona.llegada);
+    persona.tiempoEspera = tiempoEsperaActual;
+    if (tiempoEsperaActual > tiempoMaxEsperaEnCola) {
+      tiempoMaxEsperaEnCola = tiempoEsperaActual;
+    }
   }
 
   function procesarFinAtencion(persona) {
-    const empleado = empleados.find(e => e.atendiendo === persona.id);
-    if (empleado) empleado.atendiendo = null;
+    const empleado = empleados.find((e) => e.atendiendo === persona.id);
+    if (empleado) {
+      acumularTiempoOcupacionEmpleado(empleado.id);
+      empleado.atendiendo = null;
+    }
 
-    if (persona.tipo === 'PIDE_LIBRO') {
+    if (persona.tipo === "PIDE_LIBRO") {
       totalPidieronLibro++;
       const rndRetiro = Math.random();
       if (rndRetiro < P.pctSeRetira) {
-        // Se retira con el libro
         totalSeRetiraron++;
-        persona.destino = 'SE_RETIRA';
+        persona.destino = "SE_RETIRA";
         persona.rndDestino = rndRetiro;
         personasEnBiblioteca--;
         finalizarPersona(persona);
       } else {
-        // Se queda a leer ~30' (exp neg)
         totalSeQuedaronALeer++;
-        persona.destino = 'QUEDA_LEER';
+        persona.destino = "QUEDA_LEER";
         persona.rndDestino = rndRetiro;
-        const resLectura = expNeg(P.mediaLecturaInstalaciones);
+        const resLectura = tiempoLecturaInstalaciones(
+          P.mediaLecturaInstalaciones,
+        );
         persona.tiempoLectura = resLectura.valor;
         persona.rndLectura = resLectura.rnd;
         persona.salidaLectura = reloj + persona.tiempoLectura;
         lectores.push(persona);
       }
-    } else if (persona.tipo === 'DEVUELVE') {
+    } else if (persona.tipo === "DEVUELVE") {
       totalDevolvieron++;
-      persona.destino = 'DEVOLVIO';
+      persona.destino = "DEVOLVIO";
       personasEnBiblioteca--;
       finalizarPersona(persona);
     } else {
-      // CONSULTA
       totalConsultas++;
-      persona.destino = 'CONSULTO';
+      persona.destino = "CONSULTO";
       personasEnBiblioteca--;
       finalizarPersona(persona);
     }
   }
 
   function procesarFinLectura(lector) {
-    lectores = lectores.filter(l => l.id !== lector.id);
-    lector.tipo = 'DEVUELVE'; // ahora va a devolver
+    lectores = lectores.filter((l) => l.id !== lector.id);
+    lector.tipo = "DEVUELVE";
     lector.esDevolucionPostLectura = true;
 
-    // Encola para devolver
     const emp = empladoLibre();
     if (emp) {
-      lector.llegadaMostrador2 = reloj;
-      lector.tiempoEspera2 = 0;
+      lector.llegadaACola = reloj;
       iniciarAtencion(emp, lector);
     } else {
-      lector.llegadaMostrador2 = reloj;
+      lector.llegadaACola = reloj;
+      acumularTiempoEnCola();
+      largoCola++;
       cola.push(lector);
-      personasQueFueronACola++;
     }
   }
 
   function procesarFinAtencionDevolucionPostLectura(persona) {
-    const empleado = empleados.find(e => e.atendiendo === persona.id);
-    if (empleado) empleado.atendiendo = null;
+    const empleado = empleados.find((e) => e.atendiendo === persona.id);
+    if (empleado) {
+      acumularTiempoOcupacionEmpleado(empleado.id);
+      empleado.atendiendo = null;
+    }
     totalDevolvieron++;
-    persona.destino = 'DEVOLVIO_POST_LECTURA';
+    persona.destino = "DEVOLVIO_POST_LECTURA";
     personasEnBiblioteca--;
     finalizarPersona(persona);
   }
@@ -200,7 +265,14 @@ export function ejecutarSimulacion(params) {
     const permanencia = persona.salida - persona.llegada;
     sumaTiemposPermanencia += permanencia;
     personasFinalizadas++;
-    registroPersonas.set(persona.id, { llegada: persona.llegada, salida: persona.salida, permanencia });
+    if (permanencia < tiempoMinPermanenciaEnBiblioteca) {
+      tiempoMinPermanenciaEnBiblioteca = permanencia;
+    }
+    registroPersonas.set(persona.id, {
+      llegada: persona.llegada,
+      salida: persona.salida,
+      permanencia,
+    });
   }
 
   // ─── EVENTO: determinar el próximo evento ─────────────────────────────
@@ -208,22 +280,31 @@ export function ejecutarSimulacion(params) {
     let eventos = [];
 
     // Llegada
-    eventos.push({ tipo: 'LLEGADA', tiempo: proxLlegada });
+    eventos.push({ tipo: "LLEGADA", tiempo: proxLlegada });
 
     // Fin de atención de empleados
-    empleados.forEach(e => {
+    empleados.forEach((e) => {
       if (e.atendiendo !== null) {
-        const persona = personasEnAtencion.find(p => p.id === e.atendiendo);
-        if (persona) eventos.push({ tipo: 'FIN_ATENCION', tiempo: e.libreEn, personaId: e.atendiendo });
+        const persona = personasEnAtencion.find((p) => p.id === e.atendiendo);
+        if (persona)
+          eventos.push({
+            tipo: "FIN_ATENCION",
+            tiempo: e.libreEn,
+            personaId: e.atendiendo,
+          });
       }
     });
 
     // Fin de lectura
-    lectores.forEach(l => {
-      eventos.push({ tipo: 'FIN_LECTURA', tiempo: l.salidaLectura, personaId: l.id });
+    lectores.forEach((l) => {
+      eventos.push({
+        tipo: "FIN_LECTURA",
+        tiempo: l.salidaLectura,
+        personaId: l.id,
+      });
     });
 
-    return eventos.reduce((min, e) => e.tiempo < min.tiempo ? e : min);
+    return eventos.reduce((min, e) => (e.tiempo < min.tiempo ? e : min));
   }
 
   // ─── Objetos persistentes en la simulación ────────────────────────────
@@ -264,7 +345,7 @@ export function ejecutarSimulacion(params) {
       rndLectura: null,
       tiempoLectura: null,
       // cola
-      largoColaMostrador: cola.length,
+      largoColaMostrador: largoCola,
       // estado empleados
       empleado1LibreEn: empleados[0].libreEn,
       empleado1Atendiendo: empleados[0].atendiendo,
@@ -274,7 +355,7 @@ export function ejecutarSimulacion(params) {
       personasEnBiblioteca,
       bibliotecaCerrada,
       lectoresEnSala: lectores.length,
-      // métricas acumuladas
+      // métricas acumuladas snapshot
       personasFinalizadas,
       sumaTiemposPermanencia: parseFloat(sumaTiemposPermanencia.toFixed(2)),
       personasCerrada,
@@ -283,8 +364,15 @@ export function ejecutarSimulacion(params) {
       totalConsultas,
       totalSeQuedaronALeer,
       totalSeRetiraron,
-      tiempoTotalCola: parseFloat(tiempoTotalCola.toFixed(2)),
-      personasQueFueronACola,
+      // estadísticas adicionales snapshot (acumuladas hasta este momento)
+      tiempoOcupadoEmpleado1Acum: parseFloat(tiempoOcupadoEmpleado1.toFixed(2)),
+      tiempoOcupadoEmpleado2Acum: parseFloat(tiempoOcupadoEmpleado2.toFixed(2)),
+      sumaTiemposEnColaAcum: parseFloat(sumaTiemposEnCola.toFixed(2)),
+      tiempoMaxEsperaEnCola: parseFloat(tiempoMaxEsperaEnCola.toFixed(2)),
+      tiempoMinPermanenciaEnBiblioteca:
+        tiempoMinPermanenciaEnBiblioteca === Infinity
+          ? null
+          : parseFloat(tiempoMinPermanenciaEnBiblioteca.toFixed(2)),
       // objetos presentes
       personasPresentes: JSON.parse(JSON.stringify(personasEnSistema)),
       lectoresPresentes: JSON.parse(JSON.stringify(lectores)),
@@ -292,29 +380,26 @@ export function ejecutarSimulacion(params) {
 
     // ─── Procesar evento ──────────────────────────────────────────────
 
-    if (evento.tipo === 'LLEGADA') {
+    if (evento.tipo === "LLEGADA") {
       totalPersonas++;
       const id = nextId++;
 
       // Generar próxima llegada
       const resLlegada = expNeg(P.mediaLlegada);
       filaEvento.rndLlegada = resLlegada.rnd;
-      filaEvento.proxLlegada = parseFloat((reloj + resLlegada.valor).toFixed(2));
+      filaEvento.proxLlegada = parseFloat(
+        (reloj + resLlegada.valor).toFixed(2),
+      );
       proxLlegada = reloj + resLlegada.valor;
 
       filaEvento.personaId = id;
 
       if (bibliotecaCerrada) {
         personasCerrada++;
-        filaEvento.evento = 'LLEGADA_CERRADA';
-        filaEvento.destino = 'RECHAZADA';
+        filaEvento.evento = "LLEGADA_CERRADA";
+        filaEvento.destino = "RECHAZADA";
       } else {
         personasEnBiblioteca++;
-        if (personasEnBiblioteca > maxPersonasSimultaneas) maxPersonasSimultaneas = personasEnBiblioteca;
-        if (personasEnBiblioteca >= P.capacidadMax) {
-          bibliotecaCerrada = true;
-          veces20personas++;
-        }
 
         const tipRes = tipoLlegada();
         const tipo = tipRes.tipo;
@@ -325,6 +410,7 @@ export function ejecutarSimulacion(params) {
           id,
           tipo,
           llegada: reloj,
+          llegadaACola: null,
           finAtencion: null,
           empleadoId: null,
           destino: null,
@@ -332,25 +418,37 @@ export function ejecutarSimulacion(params) {
           esDevolucionPostLectura: false,
         };
 
+        if (personasEnBiblioteca >= P.capacidadMax) {
+          bibliotecaCerrada = true;
+        }
+
         const emp = empladoLibre();
         if (emp) {
+          persona.llegadaACola = reloj; // llegó y fue atendido de inmediato, espera = 0
           iniciarAtencion(emp, persona);
           filaEvento.empleadoAsignado = emp.id;
           filaEvento.rndDuracion = persona.rndDur;
-          filaEvento.duracionAtencion = parseFloat((persona.finAtencion - reloj).toFixed(2));
+          filaEvento.duracionAtencion = parseFloat(
+            (persona.finAtencion - reloj).toFixed(2),
+          );
           filaEvento.tablaRK = persona.tablaRK;
-          filaEvento.meticulosidad = persona.meticulosidad ? parseFloat(persona.meticulosidad.toFixed(2)) : null;
+          filaEvento.meticulosidad = persona.meticulosidad
+            ? parseFloat(persona.meticulosidad.toFixed(2))
+            : null;
           filaEvento.rndMeticulosidad = persona.rndMet;
         } else {
+          persona.llegadaACola = reloj;
+          acumularTiempoEnCola();
+          largoCola++;
           cola.push(persona);
-          personasQueFueronACola++;
         }
 
         personasEnSistema.push(persona);
       }
-
-    } else if (evento.tipo === 'FIN_ATENCION') {
-      const personaIdx = personasEnSistema.findIndex(p => p.id === evento.personaId);
+    } else if (evento.tipo === "FIN_ATENCION") {
+      const personaIdx = personasEnSistema.findIndex(
+        (p) => p.id === evento.personaId,
+      );
       if (personaIdx === -1) {
         filas.push(filaEvento);
         continue;
@@ -358,7 +456,6 @@ export function ejecutarSimulacion(params) {
       const persona = personasEnSistema[personaIdx];
 
       if (persona.esDevolucionPostLectura) {
-        // Segunda atención (devuelve después de leer)
         procesarFinAtencionDevolucionPostLectura(persona);
         personasEnSistema.splice(personaIdx, 1);
 
@@ -368,16 +465,16 @@ export function ejecutarSimulacion(params) {
       } else {
         procesarFinAtencion(persona);
 
-        if (persona.destino !== 'QUEDA_LEER') {
+        if (persona.destino !== "QUEDA_LEER") {
           personasEnSistema.splice(personaIdx, 1);
         }
-        // Si se queda a leer, sigue en personasEnSistema y en lectores
-        // actualizar destino en filaEvento
         filaEvento.destino = persona.destino;
         filaEvento.rndDestino = persona.rndDestino;
-        if (persona.destino === 'QUEDA_LEER') {
+        if (persona.destino === "QUEDA_LEER") {
           filaEvento.rndLectura = persona.rndLectura;
-          filaEvento.tiempoLectura = parseFloat(persona.tiempoLectura.toFixed(2));
+          filaEvento.tiempoLectura = parseFloat(
+            persona.tiempoLectura.toFixed(2),
+          );
         }
 
         if (personasEnBiblioteca < P.capacidadMax && bibliotecaCerrada) {
@@ -385,27 +482,29 @@ export function ejecutarSimulacion(params) {
         }
       }
 
-      // Atender siguiente en cola
+      // Atender siguiente en cola si hay alguien esperando
       if (cola.length > 0) {
         const siguiente = cola.shift();
-        const relojActual = reloj;
-        const empLibre = empleados.find(e => e.atendiendo === null && e.libreEn <= relojActual);
+        acumularTiempoEnCola();
+        largoCola--;
+        const empLibre = empleados.find(
+          (e) => e.atendiendo === null && e.libreEn <= reloj,
+        );
         if (empLibre) {
           iniciarAtencion(empLibre, siguiente);
           filaEvento.empleadoAsignado = empLibre.id;
         }
       }
-
-    } else if (evento.tipo === 'FIN_LECTURA') {
-      const lector = lectores.find(l => l.id === evento.personaId);
+    } else if (evento.tipo === "FIN_LECTURA") {
+      const lector = lectores.find((l) => l.id === evento.personaId);
       if (lector) {
         procesarFinLectura(lector);
-        filaEvento.evento = 'FIN_LECTURA';
+        filaEvento.evento = "FIN_LECTURA";
       }
     }
 
-    // Actualizar estado para la fila
-    filaEvento.largoColaMostrador = cola.length;
+    // Actualizar snapshot de estado para la fila
+    filaEvento.largoColaMostrador = largoCola;
     filaEvento.personasEnBiblioteca = personasEnBiblioteca;
     filaEvento.bibliotecaCerrada = bibliotecaCerrada;
     filaEvento.lectoresEnSala = lectores.length;
@@ -414,16 +513,31 @@ export function ejecutarSimulacion(params) {
     filaEvento.empleado2LibreEn = parseFloat(empleados[1].libreEn.toFixed(2));
     filaEvento.empleado2Atendiendo = empleados[1].atendiendo;
     filaEvento.personasFinalizadas = personasFinalizadas;
-    filaEvento.sumaTiemposPermanencia = parseFloat(sumaTiemposPermanencia.toFixed(2));
+    filaEvento.sumaTiemposPermanencia = parseFloat(
+      sumaTiemposPermanencia.toFixed(2),
+    );
     filaEvento.personasCerrada = personasCerrada;
     filaEvento.totalPidieronLibro = totalPidieronLibro;
     filaEvento.totalDevolvieron = totalDevolvieron;
     filaEvento.totalConsultas = totalConsultas;
     filaEvento.totalSeQuedaronALeer = totalSeQuedaronALeer;
     filaEvento.totalSeRetiraron = totalSeRetiraron;
-    filaEvento.tiempoTotalCola = parseFloat(tiempoTotalCola.toFixed(2));
-    filaEvento.personasQueFueronACola = personasQueFueronACola;
-    filaEvento.personasPresentes = personasEnSistema.map(p => ({
+    // estadísticas adicionales actualizadas post-evento
+    filaEvento.tiempoOcupadoEmpleado1Acum = parseFloat(
+      tiempoOcupadoEmpleado1.toFixed(2),
+    );
+    filaEvento.tiempoOcupadoEmpleado2Acum = parseFloat(
+      tiempoOcupadoEmpleado2.toFixed(2),
+    );
+    filaEvento.sumaTiemposEnColaAcum = parseFloat(sumaTiemposEnCola.toFixed(2));
+    filaEvento.tiempoMaxEsperaEnCola = parseFloat(
+      tiempoMaxEsperaEnCola.toFixed(2),
+    );
+    filaEvento.tiempoMinPermanenciaEnBiblioteca =
+      tiempoMinPermanenciaEnBiblioteca === Infinity
+        ? null
+        : parseFloat(tiempoMinPermanenciaEnBiblioteca.toFixed(2));
+    filaEvento.personasPresentes = personasEnSistema.map((p) => ({
       id: p.id,
       tipo: p.tipo,
       llegada: parseFloat(p.llegada.toFixed(2)),
@@ -431,7 +545,7 @@ export function ejecutarSimulacion(params) {
       empleadoId: p.empleadoId || null,
       destino: p.destino || null,
     }));
-    filaEvento.lectoresPresentes = lectores.map(l => ({
+    filaEvento.lectoresPresentes = lectores.map((l) => ({
       id: l.id,
       salidaLectura: parseFloat(l.salidaLectura.toFixed(2)),
     }));
@@ -439,40 +553,73 @@ export function ejecutarSimulacion(params) {
     filas.push(filaEvento);
   }
 
+  // ─── Cierre: acumular tiempo de ocupación pendiente al final ─────────────
+  // Si un empleado termina ocupado justo al llegar al límite de iteraciones,
+  // hay tiempo ocupado desde el último cambio de estado hasta el reloj final.
+  acumularTiempoOcupacionEmpleado(1);
+  acumularTiempoOcupacionEmpleado(2);
+  acumularTiempoEnCola();
+
   // ─── Métricas finales ─────────────────────────────────────────────────
+  const tiempoSimulacion = reloj;
+
   const metricas = {
+    // Obligatorias
+    promedioPermanencia:
+      personasFinalizadas > 0
+        ? parseFloat((sumaTiemposPermanencia / personasFinalizadas).toFixed(2))
+        : 0,
+    porcentajePersonasConBibliotecaCerrada:
+      totalPersonas > 0
+        ? parseFloat(((personasCerrada / totalPersonas) * 100).toFixed(2))
+        : 0,
+
+    // Adicional 1: % de ocupación del Empleado 1
+    porcentajeOcupacionEmpleado1:
+      tiempoSimulacion > 0
+        ? parseFloat(
+            ((tiempoOcupadoEmpleado1 / tiempoSimulacion) * 100).toFixed(2),
+          )
+        : 0,
+
+    // Adicional 2: Cantidad promedio de clientes en cola (Little: área bajo curva / tiempo total)
+    cantidadPromedioClientesEnCola:
+      tiempoSimulacion > 0
+        ? parseFloat((sumaTiemposEnCola / tiempoSimulacion).toFixed(2))
+        : 0,
+
+    // Adicional 3: Tiempo máximo de permanencia en cola
+    tiempoMaximoPermanenciaEnCola: parseFloat(tiempoMaxEsperaEnCola.toFixed(2)),
+
+    // Adicional 4: Tiempo mínimo de permanencia en la biblioteca
+    tiempoMinimoPermanenciaEnBiblioteca:
+      tiempoMinPermanenciaEnBiblioteca === Infinity
+        ? 0
+        : parseFloat(tiempoMinPermanenciaEnBiblioteca.toFixed(2)),
+
+    // Adicional 5: Cantidad de personas que se quedan a leer
+    cantidadPersonasQueSeQuedaronALeer: totalSeQuedaronALeer,
+
+    // Adicional 6: Promedio de tiempo de ocio del Empleado 2
+    // ocio E2 = tiempo total simulación − tiempo que E2 estuvo ocupado
+    porcentajeTiempoOcioEmpleado2:
+      tiempoSimulacion > 0
+        ? parseFloat(
+            (
+              ((tiempoSimulacion - tiempoOcupadoEmpleado2) / tiempoSimulacion) *
+              100
+            ).toFixed(2),
+          )
+        : 0,
+
+    // Auxiliares (para contexto en la UI, no son las estadísticas pedidas)
     totalPersonas,
     personasFinalizadas,
-    promedioPermanencia: personasFinalizadas > 0
-      ? parseFloat((sumaTiemposPermanencia / personasFinalizadas).toFixed(2))
-      : 0,
-    pctCerrada: totalPersonas > 0
-      ? parseFloat(((personasCerrada / totalPersonas) * 100).toFixed(2))
-      : 0,
+    personasCerrada,
     totalPidieronLibro,
     totalDevolvieron,
     totalConsultas,
-    totalSeQuedaronALeer,
     totalSeRetiraron,
-    personasCerrada,
-    // Estadísticas adicionales propias:
-    promedioEsperaCola: personasQueFueronACola > 0
-      ? parseFloat((tiempoTotalCola / personasQueFueronACola).toFixed(2))
-      : 0,
-    pctFueronACola: totalPersonas > 0
-      ? parseFloat(((personasQueFueronACola / totalPersonas) * 100).toFixed(2))
-      : 0,
-    pctSeQuedaLeer: totalPidieronLibro > 0
-      ? parseFloat(((totalSeQuedaronALeer / totalPidieronLibro) * 100).toFixed(2))
-      : 0,
-    veces20personas,
-    maxPersonasSimultaneas,
-    relacionPrestamosVsConsultas: totalConsultas > 0
-      ? parseFloat((totalPidieronLibro / totalConsultas).toFixed(2))
-      : 0,
-    relacionDevolucionesVsPrestamos: totalPidieronLibro > 0
-      ? parseFloat((totalDevolvieron / totalPidieronLibro).toFixed(2))
-      : 0,
   };
 
   return {
