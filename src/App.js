@@ -34,18 +34,19 @@ function ParamInput({
   );
 }
 
-function Badge({ tipo }) {
+function Badge({ tipo, sufijo = '' }) {
   const map = {
-    PIDE_LIBRO: { label: "Pide libro", cls: "badge-blue" },
-    DEVUELVE: { label: "Devuelve", cls: "badge-green" },
-    CONSULTA: { label: "Consulta", cls: "badge-yellow" },
-    LLEGADA: { label: "Llegada", cls: "badge-teal" },
-    LLEGADA_CERRADA: { label: "Llegada (cerrada)", cls: "badge-red" },
-    FIN_ATENCION: { label: "Fin atención", cls: "badge-purple" },
-    FIN_LECTURA: { label: "Fin lectura", cls: "badge-orange" },
+    INICIO: { label: 'Inicialización', cls: 'badge-gray' },
+    PIDE_LIBRO:      { label: 'Pide libro',          cls: 'badge-blue'   },
+    DEVUELVE:        { label: 'Devuelve',             cls: 'badge-green'  },
+    CONSULTA:        { label: 'Consulta',             cls: 'badge-yellow' },
+    LLEGADA:         { label: 'Llegada',              cls: 'badge-teal'   },
+    LLEGADA_CERRADA: { label: 'Llegada (cerrada)',    cls: 'badge-red'    },
+    FIN_ATENCION:    { label: 'Fin atención',         cls: 'badge-purple' },
+    FIN_LECTURA:     { label: 'Fin lectura',          cls: 'badge-orange' },
   };
-  const info = map[tipo] || { label: tipo, cls: "badge-gray" };
-  return <span className={`badge ${info.cls}`}>{info.label}</span>;
+  const info = map[tipo] || { label: tipo, cls: 'badge-gray' };
+  return <span className={`badge ${info.cls}`}>{info.label}{sufijo}</span>;
 }
 
 function RKTable({ tabla }) {
@@ -118,16 +119,12 @@ const COLS = [
   { key: "iteracion", label: "Iteración", width: 60 },
   { key: "reloj", label: "Reloj (min)", width: 75 },
   {
-    key: "evento",
-    label: "Evento",
-    width: 140,
-    render: (v) => <Badge tipo={v} />,
-  },
-  {
-    key: "personaId",
-    label: "ID Persona",
-    width: 70,
-    render: (v) => (v ? `C${v}` : "—"),
+    key: 'evento', label: 'Evento', width: 150,
+    render: (v, row) => {
+      const id = row.eventoPersonaId || row.personaId;
+      const sufijo = id ? ` C${id}` : '';
+      return <Badge tipo={v} sufijo={sufijo} />;
+    }
   },
   {
     key: "rndTipo",
@@ -208,7 +205,7 @@ const COLS = [
     width: 100,
     render: (v) => (v != null ? v.toFixed(2) : "—"),
   },
-  { key: "largoColaMostrador", label: "Largo cola mostrador", width: 100 },
+  { key: "largoColaMostrador", label: "Cola mostrador", width: 100 },
   {
     key: "empleado1Atendiendo",
     label: "Empleado 1 atendiendo",
@@ -294,7 +291,7 @@ const COLS = [
 
 function VectorEstado({ filas, desde, cantidad, ultimaFila }) {
   const filasVista = useMemo(() => {
-    const slice = filas.slice(desde - 1, desde - 1 + cantidad);
+    const slice = filas.slice(desde, desde + cantidad);
     if (ultimaFila && filas.length > 0) {
       const uf = filas[filas.length - 1];
       if (!slice.find((f) => f.iteracion === uf.iteracion)) {
@@ -357,7 +354,7 @@ export default function App() {
   const [params, setParams] = useState({ ...DEFAULT_PARAMS });
   const [resultado, setResultado] = useState(null);
   const [corriendo, setCorriendo] = useState(false);
-  const [desde, setDesde] = useState(1);
+  const [desde, setDesde] = useState(0);
   const [cantidad, setCantidad] = useState(50);
   const [tab, setTab] = useState("vector");
 
@@ -373,7 +370,7 @@ export default function App() {
       try {
         const res = ejecutarSimulacion(params);
         setResultado(res);
-        setDesde(1);
+        setDesde(0);
       } catch (err) {
         alert("Error en simulación: " + err.message);
       } finally {
@@ -737,10 +734,10 @@ export default function App() {
                       <input
                         type="number"
                         value={desde}
-                        min={1}
+                        min={0}
                         max={filas.length}
                         onChange={(e) =>
-                          setDesde(Math.max(1, parseInt(e.target.value) || 1))
+                          setDesde(Math.max(0, parseInt(e.target.value) || 1))
                         }
                       />
                     </label>
@@ -753,7 +750,7 @@ export default function App() {
                         max={500}
                         onChange={(e) =>
                           setCantidad(
-                            Math.max(1, parseInt(e.target.value) || 1),
+                            Math.max(0, parseInt(e.target.value) || 1),
                           )
                         }
                       />

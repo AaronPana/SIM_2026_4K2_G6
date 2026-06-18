@@ -60,7 +60,7 @@ export function ejecutarSimulacion(params) {
   let sumaTiemposPermanencia = 0;
   let personasFinalizadas = 0;
 
-  // Estadísticas adicionales — grupo 6
+  // Estadísticas adicionales 
   // (1) % ocupación Empleado 1
   let tiempoOcupadoEmpleado1 = 0;
   let ultimoCambioEstadoEmpleado1 = 0; // reloj en que E1 pasó a ocupado
@@ -312,6 +312,48 @@ export function ejecutarSimulacion(params) {
 
   // ─── Iteración principal ──────────────────────────────────────────────
   let iteracion = 0;
+
+  filas.push({
+    iteracion: 0,
+    reloj: 0,
+    evento: 'INICIO',
+    eventoPersonaId: null,
+    personaId: null,
+    tipoPersona: null,
+    rndTipo: null,
+    rndLlegada: null,
+    proxLlegada: parseFloat(proxLlegada.toFixed(4)),
+    meticulosidad: null,
+    rndMeticulosidad: null,
+    tablaRK: null,
+    duracionAtencion: null,
+    rndDuracion: null,
+    empleadoAsignado: null,
+    destino: null,
+    rndDestino: null,
+    rndLectura: null,
+    tiempoLectura: null,
+    largoColaMostrador: 0,
+    empleado1LibreEn: 0,
+    empleado1Atendiendo: null,
+    empleado2LibreEn: 0,
+    empleado2Atendiendo: null,
+    personasEnBiblioteca: 0,
+    bibliotecaCerrada: false,
+    lectoresEnSala: 0,
+    personasFinalizadas: 0,
+    sumaTiemposPermanencia: 0,
+    personasCerrada: 0,
+    totalPidieronLibro: 0,
+    totalDevolvieron: 0,
+    totalConsultas: 0,
+    totalSeQuedaronALeer: 0,
+    totalSeRetiraron: 0,
+    tiempoTotalCola: 0,
+    personasQueFueronACola: 0,
+    personasPresentes: [],
+    lectoresPresentes: [],
+  });
 
   while (iteracion < P.maxIteraciones && reloj < P.tiempoMaximo) {
     iteracion++;
@@ -578,8 +620,8 @@ export function ejecutarSimulacion(params) {
     porcentajeOcupacionEmpleado1:
       tiempoSimulacion > 0
         ? parseFloat(
-            ((tiempoOcupadoEmpleado1 / tiempoSimulacion) * 100).toFixed(2),
-          )
+          ((tiempoOcupadoEmpleado1 / tiempoSimulacion) * 100).toFixed(2),
+        )
         : 0,
 
     // Adicional 2: Cantidad promedio de clientes en cola (Little: área bajo curva / tiempo total)
@@ -605,11 +647,11 @@ export function ejecutarSimulacion(params) {
     porcentajeTiempoOcioEmpleado2:
       tiempoSimulacion > 0
         ? parseFloat(
-            (
-              ((tiempoSimulacion - tiempoOcupadoEmpleado2) / tiempoSimulacion) *
-              100
-            ).toFixed(2),
-          )
+          (
+            ((tiempoSimulacion - tiempoOcupadoEmpleado2) / tiempoSimulacion) *
+            100
+          ).toFixed(2),
+        )
         : 0,
 
     // Auxiliares (para contexto en la UI, no son las estadísticas pedidas)
