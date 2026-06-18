@@ -49,7 +49,8 @@ export function ejecutarSimulacion(params) {
   let personasEnBiblioteca = 0; // total dentro (cola + siendo atendidos + lectores)
 
   // Próxima llegada
-  let proxLlegada = expNeg(P.mediaLlegada).valor;
+  const primeraLlegada = expNeg(P.mediaLlegada);
+  let proxLlegada = primeraLlegada.valor;
 
   // Próximas salidas de lectores se manejan como eventos
   // Usaremos una lista de eventos para lectores + fin atención
@@ -321,7 +322,7 @@ export function ejecutarSimulacion(params) {
     personaId: null,
     tipoPersona: null,
     rndTipo: null,
-    rndLlegada: null,
+    rndLlegada: parseFloat(primeraLlegada.rnd.toFixed(6)),
     proxLlegada: parseFloat(proxLlegada.toFixed(4)),
     meticulosidad: null,
     rndMeticulosidad: null,

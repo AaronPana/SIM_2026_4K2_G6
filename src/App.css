@@ -38,7 +38,19 @@ body {
   top: 0;
   z-index: 100;
 }
-.header-inner { max-width: 1600px; margin: 0 auto; }
+.header-inner { max-width: 1600px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+.header-back {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  font-family: var(--font);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.header-back:hover { color: var(--text); border-color: var(--accent); }
 .header-logo { display: flex; align-items: center; gap: 14px; }
 .logo-mark { font-size: 32px; }
 .header-title { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; color: var(--text); }
@@ -313,3 +325,138 @@ body {
 
 /* ─── Misc ───────────────────────────────────────────────────────────────── */
 .text-muted { color: var(--text-muted); }
+
+/* ─── Presentación / Onboarding ──────────────────────────────────────────── */
+.presentacion { max-width: 1040px; margin: 0 auto; padding: 48px 24px 80px; }
+.pres-hero {
+  text-align: center;
+  padding: 56px 24px 48px;
+  background: radial-gradient(1200px 400px at 50% -10%, rgba(108,142,255,0.16), transparent 70%);
+  border-radius: 18px;
+  margin-bottom: 40px;
+}
+.pres-hero-badge {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  color: var(--accent);
+  background: rgba(108,142,255,0.1);
+  border: 1px solid var(--border);
+  padding: 6px 14px;
+  border-radius: 999px;
+  margin-bottom: 22px;
+}
+.pres-hero-title { font-size: 42px; font-weight: 800; letter-spacing: -1px; line-height: 1.1; margin: 0 0 18px; }
+.pres-accent { color: var(--accent); }
+.pres-hero-sub { max-width: 680px; margin: 0 auto 28px; font-size: 17px; line-height: 1.6; color: var(--text-muted); }
+.pres-cta {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #fff;
+  border: none;
+  padding: 13px 26px;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: var(--font);
+  border-radius: var(--radius);
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(108,142,255,0.3);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.pres-cta:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(108,142,255,0.42); }
+
+.pres-section { margin-bottom: 48px; }
+.pres-section-title {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  margin: 0 0 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.pres-section-lead { color: var(--text-muted); font-size: 15px; line-height: 1.6; margin: 14px 0 22px; }
+.pres-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.pres-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; }
+.pres-card h3 { font-size: 16px; font-weight: 700; margin: 0 0 10px; color: var(--text); }
+.pres-card p { margin: 0; color: var(--text-muted); font-size: 14.5px; line-height: 1.6; }
+.pres-card .badge { vertical-align: middle; }
+.pres-list { margin: 0; padding-left: 18px; color: var(--text-muted); font-size: 14.5px; line-height: 1.8; }
+
+.pres-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.pres-table th { text-align: left; background: var(--surface2); color: var(--text); font-weight: 700; font-size: 13px; padding: 12px 16px; }
+.pres-table td { padding: 12px 16px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 14px; line-height: 1.5; }
+.pres-table td:first-child { color: var(--text); font-weight: 600; white-space: nowrap; }
+.pres-table code {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--accent2);
+  background: rgba(167,139,250,0.1);
+  padding: 1px 6px;
+  border-radius: 5px;
+}
+
+.pres-footer-cta {
+  text-align: center;
+  margin-top: 32px;
+  padding: 32px 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.pres-footer-cta p { color: var(--text-muted); font-size: 15px; margin: 0 0 18px; }
+
+/* ─── Scroll reveal ──────────────────────────────────────────────────────── */
+.reveal {
+  opacity: 0;
+  transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+.reveal-up { transform: translateY(42px); }
+.reveal-left { transform: translateX(-56px); }
+.reveal-right { transform: translateX(56px); }
+.reveal.is-visible { opacity: 1; transform: none; }
+
+/* ─── El caso: secuencia narrativa ───────────────────────────────────────── */
+.pres-caso { position: relative; max-width: 780px; margin: 18px auto 0; display: flex; flex-direction: column; gap: 26px; }
+.pres-caso::before {
+  content: "";
+  position: absolute;
+  left: 39px;
+  top: 28px;
+  bottom: 28px;
+  width: 2px;
+  background: linear-gradient(var(--accent), var(--accent2));
+  opacity: 0.25;
+}
+.caso-step {
+  display: flex;
+  gap: 22px;
+  align-items: flex-start;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 22px 26px;
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.caso-step:hover { transform: translateX(4px); box-shadow: 0 10px 30px rgba(0,0,0,0.28); border-left-color: var(--accent2); }
+.caso-num { font-family: var(--mono); font-size: 28px; font-weight: 800; color: var(--accent); opacity: 0.6; line-height: 1; min-width: 40px; text-align: center; }
+.caso-body h3 { font-size: 17px; font-weight: 700; margin: 0 0 8px; color: var(--text); }
+.caso-body p { margin: 0; color: var(--text-muted); font-size: 15px; line-height: 1.65; }
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1 !important; transform: none !important; transition: none; }
+  .caso-step:hover { transform: none; }
+}
+@media (max-width: 720px) {
+  .pres-grid { grid-template-columns: 1fr; }
+  .pres-hero-title { font-size: 32px; }
+}

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { ejecutarSimulacion, DEFAULT_PARAMS } from "./simulation/motor.js";
 import "./App.css";
 
@@ -208,9 +208,14 @@ const COLS = [
   { key: "largoColaMostrador", label: "Cola mostrador", width: 100 },
   {
     key: "empleado1Atendiendo",
-    label: "Empleado 1 atendiendo",
-    width: 110,
-    render: (v) => (v ? `C${v}` : "Libre"),
+    label: "Empleado 1",
+    width: 95,
+    render: (v) =>
+      v ? (
+        <span className="badge badge-purple">Ocupado</span>
+      ) : (
+        <span className="badge badge-green">Libre</span>
+      ),
   },
   {
     key: "empleado1LibreEn",
@@ -220,9 +225,14 @@ const COLS = [
   },
   {
     key: "empleado2Atendiendo",
-    label: "Empleado 2 atendiendo",
-    width: 110,
-    render: (v) => (v ? `C${v}` : "Libre"),
+    label: "Empleado 2",
+    width: 95,
+    render: (v) =>
+      v ? (
+        <span className="badge badge-purple">Ocupado</span>
+      ) : (
+        <span className="badge badge-green">Libre</span>
+      ),
   },
   {
     key: "empleado2LibreEn",
@@ -348,6 +358,221 @@ function VectorEstado({ filas, desde, cantidad, ultimaFila }) {
   );
 }
 
+// ─── Presentación / Onboarding ──────────────────────────────────────────────
+
+// Revela su contenido con una animación cuando entra en el viewport al hacer scroll.
+function Reveal({ children, dir = "up", className = "" }) {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            setVisible(true);
+            obs.unobserve(e.target);
+          }
+        });
+      },
+      { threshold: 0.2, rootMargin: "0px 0px -10% 0px" },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className={`reveal reveal-${dir} ${visible ? "is-visible" : ""} ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function Presentacion({ onComenzar }) {
+  return (
+    <div className="presentacion">
+      {/* Hero */}
+      <section className="pres-hero">
+        <div className="pres-hero-badge">UTN FRC · Simulación 2026 · 4K2 · Grupo 6</div>
+        <h1 className="pres-hero-title">
+          📚 Simulación de una <span className="pres-accent">Biblioteca pública</span>
+        </h1>
+        <p className="pres-hero-sub">
+          Modelo de <strong>simulación de eventos discretos</strong> del mostrador de
+          atención de una biblioteca: dos empleados, una cola de espera, una sala de
+          lectura y control de aforo. Antes de meternos en el simulador, pongamos en
+          contexto el caso que nos tocó.
+        </p>
+        <button className="pres-cta" onClick={onComenzar}>
+          Ir a la simulación →
+        </button>
+      </section>
+
+      {/* El caso */}
+      <section className="pres-section">
+        <Reveal dir="up">
+          <h2 className="pres-section-title">🏛️ El caso: la Biblioteca</h2>
+          <p className="pres-section-lead">
+            Conozcamos el caso de a poco, parte por parte, antes de simularlo.
+          </p>
+        </Reveal>
+        <div className="pres-caso">
+          <Reveal dir="left">
+            <article className="caso-step">
+              <div className="caso-num">01</div>
+              <div className="caso-body">
+                <h3>Las personas llegan al mostrador</h3>
+                <p>
+                  A la biblioteca llegan personas <strong>cada 4 minutos</strong> en
+                  promedio. En el mostrador hay <strong>dos empleados</strong> que
+                  atienden indistintamente, tomando a la siguiente persona de una{" "}
+                  <strong>única cola FIFO</strong>.
+                </p>
+              </div>
+            </article>
+          </Reveal>
+          <Reveal dir="right">
+            <article className="caso-step">
+              <div className="caso-num">02</div>
+              <div className="caso-body">
+                <h3>Llegan por tres motivos</h3>
+                <p>
+                  <span className="badge badge-blue">Pide libro</span> 45% &nbsp;·&nbsp;
+                  <span className="badge badge-green">Devuelve</span> 45% &nbsp;·&nbsp;
+                  <span className="badge badge-yellow">Consulta socio</span> 10%. El tipo
+                  de cada persona se decide con un número aleatorio.
+                </p>
+              </div>
+            </article>
+          </Reveal>
+          <Reveal dir="left">
+            <article className="caso-step">
+              <div className="caso-num">03</div>
+              <div className="caso-body">
+                <h3>Quien pide un libro, decide</h3>
+                <p>
+                  El <strong>60% se lo lleva y se retira</strong>; el{" "}
+                  <strong>40% se queda leyendo</strong> en la sala (~30 min) y después
+                  vuelve a hacer cola para devolverlo antes de irse.
+                </p>
+              </div>
+            </article>
+          </Reveal>
+          <Reveal dir="right">
+            <article className="caso-step">
+              <div className="caso-num">04</div>
+              <div className="caso-body">
+                <h3>Políticas de la biblioteca</h3>
+                <p>
+                  Se presta <strong>un solo libro por persona</strong>. Y cuando hay{" "}
+                  <strong>20 personas adentro</strong> la biblioteca{" "}
+                  <strong>cierra</strong>: las llegadas se rechazan hasta que la ocupación
+                  vuelve a bajar.
+                </p>
+              </div>
+            </article>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* Reglas y variables */}
+      <section className="pres-section">
+        <h2 className="pres-section-title">🎲 Reglas y variables aleatorias</h2>
+        <p className="pres-section-lead">
+          Cada demora del sistema se modela con una distribución de probabilidad. La
+          consulta de socio es especial: su duración surge de integrar una ecuación
+          diferencial con <strong>Runge-Kutta 4</strong>.
+        </p>
+        <table className="pres-table">
+          <thead>
+            <tr>
+              <th>Variable</th>
+              <th>Modelo / Distribución</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Tiempo entre llegadas</td>
+              <td>Exponencial negativa, media <strong>4 min</strong></td>
+            </tr>
+            <tr>
+              <td>Tipo de persona</td>
+              <td>Discreta: 45% pide · 45% devuelve · 10% consulta</td>
+            </tr>
+            <tr>
+              <td>Atención de préstamo</td>
+              <td>Exponencial negativa, media <strong>6 min</strong></td>
+            </tr>
+            <tr>
+              <td>Atención de devolución</td>
+              <td>Uniforme <strong>[1,5 ; 2,5] min</strong> (2 ± 0,5)</td>
+            </tr>
+            <tr>
+              <td>Consulta de socio</td>
+              <td>
+                Runge-Kutta 4 de <code>dM/dt = 0,6·t + 0,7·M(t)</code>, con M(0)=0 y
+                h=0,1; termina cuando M(t) supera el umbral de meticulosidad U[2 ; 36]
+              </td>
+            </tr>
+            <tr>
+              <td>Tiempo de lectura en sala</td>
+              <td>Exponencial negativa, media <strong>30 min</strong></td>
+            </tr>
+            <tr>
+              <td>Decisión tras pedir libro</td>
+              <td>Discreta: 60% se retira · 40% se queda a leer</td>
+            </tr>
+            <tr>
+              <td>Capacidad / cierre</td>
+              <td>Cierra al llegar a <strong>20 personas</strong>; reabre al bajar de 20</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      {/* Objetivos y métricas */}
+      <section className="pres-section">
+        <h2 className="pres-section-title">🎯 Objetivos y métricas</h2>
+        <p className="pres-section-lead">
+          El objetivo es estudiar el comportamiento del sistema corriendo la simulación
+          y midiendo cómo se comporta el mostrador, la cola y el aforo.
+        </p>
+        <div className="pres-grid">
+          <div className="pres-card">
+            <h3>Obligatorias (del enunciado)</h3>
+            <ul className="pres-list">
+              <li>Promedio de permanencia de las personas en la biblioteca.</li>
+              <li>% de personas que llegan y la encuentran cerrada por aforo completo.</li>
+            </ul>
+          </div>
+          <div className="pres-card">
+            <h3>Propuestas por el Grupo 6</h3>
+            <ul className="pres-list">
+              <li>% de ocupación del Empleado 1.</li>
+              <li>Cantidad promedio de personas en cola.</li>
+              <li>Tiempo máximo de espera en cola.</li>
+              <li>Tiempo mínimo de permanencia en la biblioteca.</li>
+              <li>Cantidad de personas que se quedaron a leer.</li>
+              <li>% de tiempo ocioso del Empleado 2.</li>
+            </ul>
+          </div>
+        </div>
+        <div className="pres-footer-cta">
+          <p>Listo. Ahora sí, entremos al simulador y veamos el vector de estado paso a paso.</p>
+          <button className="pres-cta" onClick={onComenzar}>
+            Comenzar simulación →
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 // ─── App principal ──────────────────────────────────────────────────────────
 
 export default function App() {
@@ -357,6 +582,7 @@ export default function App() {
   const [desde, setDesde] = useState(0);
   const [cantidad, setCantidad] = useState(50);
   const [tab, setTab] = useState("vector");
+  const [vista, setVista] = useState("presentacion");
 
   const handleParam = useCallback((e) => {
     const { name, value } = e.target;
@@ -386,6 +612,10 @@ export default function App() {
     relojFinal = 0,
   } = resultado || {};
 
+  if (vista === "presentacion") {
+    return <Presentacion onComenzar={() => setVista("simulador")} />;
+  }
+
   return (
     <div className="app">
       {/* Header */}
@@ -398,6 +628,12 @@ export default function App() {
               <p className="header-sub">UTN FRC · Simulación 2026 · Grupo 6</p>
             </div>
           </div>
+          <button
+            className="header-back"
+            onClick={() => setVista("presentacion")}
+          >
+            ← Presentación
+          </button>
         </div>
       </header>
 
