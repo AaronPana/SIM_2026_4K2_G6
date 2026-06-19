@@ -326,6 +326,22 @@ body {
 /* ─── Misc ───────────────────────────────────────────────────────────────── */
 .text-muted { color: var(--text-muted); }
 
+/* ─── Botón descargar Excel ──────────────────────────────────────────────── */
+.summary-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.btn-excel {
+  background: rgba(52, 211, 153, 0.14);
+  color: var(--green);
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  padding: 9px 16px;
+  border-radius: var(--radius);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-excel:hover { background: rgba(52, 211, 153, 0.24); border-color: var(--green); }
+
 /* ─── Presentación / Onboarding ──────────────────────────────────────────── */
 .presentacion { max-width: 1040px; margin: 0 auto; padding: 48px 24px 80px; }
 .pres-hero {

@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { ejecutarSimulacion, DEFAULT_PARAMS } from "./simulation/motor.js";
+import { exportarSimulacionExcel } from "./simulation/exportExcel.js";
 import "./App.css";
 
 // ─── Componentes de UI ──────────────────────────────────────────────────────
@@ -789,7 +790,16 @@ export default function App() {
           <>
             {/* Resumen rápido */}
             <section className="panel panel-summary">
-              <h2 className="panel-title">📊 Resultado General</h2>
+              <div className="summary-head">
+                <h2 className="panel-title">📊 Resultado General</h2>
+                <button
+                  className="btn-excel"
+                  onClick={() => exportarSimulacionExcel(resultado, params)}
+                  title="Descargar el vector de estado, las métricas y los parámetros en Excel"
+                >
+                  ⬇ Descargar Excel
+                </button>
+              </div>
               <div className="summary-row">
                 <span>
                   Iteraciones realizadas:{" "}
