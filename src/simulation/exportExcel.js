@@ -11,40 +11,44 @@ function objetosPresentes(fila) {
   return [...personas, ...lectores].join("; ");
 }
 
-// Convierte una fila del vector de estado a un objeto plano con encabezados en español.
+// Convierte una fila del vector de estado a un objeto plano.
+// Mismas columnas, orden y nombres que la tabla en pantalla (array COLS de App.js).
 function mapearFila(fila) {
   const id = fila.eventoPersonaId || fila.personaId;
   return {
     "Iteración": fila.iteracion,
     "Reloj (min)": fila.reloj,
     "Evento": id ? `${fila.evento} C${id}` : fila.evento,
-    "ID Persona": id ? `C${id}` : "",
-    "RND actividad": fila.rndTipo ?? "",
+    "RND act": fila.rndTipo ?? "",
     "Actividad": fila.tipoPersona ?? "",
     "RND llegada": fila.rndLlegada ?? "",
     "Próxima llegada": fila.proxLlegada ?? "",
-    "RND meticulosidad": fila.rndMeticulosidad ?? "",
+    "RND M": fila.rndMeticulosidad ?? "",
     "Meticulosidad (M₀)": fila.meticulosidad ?? "",
-    "RK (pasos)": fila.tablaRK ? fila.tablaRK.length : "",
-    "RND duración": fila.rndDuracion ?? "",
+    "Runge-Kutta": fila.tablaRK ? `${fila.tablaRK.length} pasos` : "",
+    "RND duración atención": fila.rndDuracion ?? "",
     "Duración atención (min)": fila.duracionAtencion ?? "",
-    "Empleado asignado": fila.empleadoAsignado ?? "",
+    "Empleado asignado": fila.empleadoAsignado ? `Empleado ${fila.empleadoAsignado}` : "",
     "RND destino": fila.rndDestino ?? "",
-    "Destino": fila.destino ?? "",
-    "RND lectura": fila.rndLectura ?? "",
+    "Destino persona": fila.destino ?? "",
+    "RND tiempo lectura": fila.rndLectura ?? "",
     "Tiempo lectura (min)": fila.tiempoLectura ?? "",
     "Cola mostrador": fila.largoColaMostrador,
     "Empleado 1": fila.empleado1Atendiendo ? "Ocupado" : "Libre",
-    "Empleado 1 libre en": fila.empleado1LibreEn ?? "",
+    "Empleado 1 libre en (min)": fila.empleado1LibreEn ?? "",
     "Empleado 2": fila.empleado2Atendiendo ? "Ocupado" : "Libre",
-    "Empleado 2 libre en": fila.empleado2LibreEn ?? "",
+    "Empleado 2 libre en (min)": fila.empleado2LibreEn ?? "",
     "Personas en biblioteca": fila.personasEnBiblioteca,
     "Biblioteca cerrada": fila.bibliotecaCerrada ? "SÍ" : "NO",
     "Lectores en sala": fila.lectoresEnSala,
-    "Permanencia acum.": fila.sumaTiemposPermanencia ?? "",
-    "Finalizadas acum.": fila.personasFinalizadas ?? "",
-    "Rechazadas acum.": fila.personasCerrada ?? "",
-    "Objetos presentes": objetosPresentes(fila),
+    "Personas finalizadas (acum.)": fila.personasFinalizadas ?? "",
+    "Personas rechazadas (acum.)": fila.personasCerrada ?? "",
+    "Tiempo ocupado Empleado 1 (acum. min)": fila.tiempoOcupadoEmpleado1Acum ?? "",
+    "Tiempo ocupado Empleado 2 (acum. min)": fila.tiempoOcupadoEmpleado2Acum ?? "",
+    "Suma tiempos en cola (acum.)": fila.sumaTiemposEnColaAcum ?? "",
+    "Tiempo máx. espera en cola (min)": fila.tiempoMaxEsperaEnCola ?? "",
+    "Tiempo mín. permanencia en biblioteca (min)": fila.tiempoMinPermanenciaEnBiblioteca ?? "",
+    "Objetos presentes en el sistema": objetosPresentes(fila),
   };
 }
 
@@ -107,10 +111,11 @@ export function exportarSimulacionExcel(resultado, params) {
   const wsVector = XLSX.utils.json_to_sheet(resultado.filas.map(mapearFila));
   wsVector["!cols"] = [
     { wch: 9 }, { wch: 11 }, { wch: 22 }, { wch: 10 }, { wch: 12 }, { wch: 12 },
-    { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 9 }, { wch: 12 },
-    { wch: 18 }, { wch: 14 }, { wch: 12 }, { wch: 22 }, { wch: 12 }, { wch: 16 },
-    { wch: 14 }, { wch: 11 }, { wch: 16 }, { wch: 11 }, { wch: 16 }, { wch: 18 },
-    { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 40 },
+    { wch: 14 }, { wch: 10 }, { wch: 16 }, { wch: 14 }, { wch: 18 }, { wch: 18 },
+    { wch: 16 }, { wch: 12 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 14 },
+    { wch: 12 }, { wch: 20 }, { wch: 12 }, { wch: 20 }, { wch: 18 }, { wch: 16 },
+    { wch: 14 }, { wch: 22 }, { wch: 22 }, { wch: 28 }, { wch: 28 }, { wch: 22 },
+    { wch: 24 }, { wch: 30 }, { wch: 40 },
   ];
   XLSX.utils.book_append_sheet(wb, wsVector, "Vector de Estado");
 
