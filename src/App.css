@@ -326,6 +326,35 @@ body {
 /* ─── Misc ───────────────────────────────────────────────────────────────── */
 .text-muted { color: var(--text-muted); }
 
+/* ─── Diagramas de flujo ─────────────────────────────────────────────────── */
+.fd-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.fd-tab {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 8px 16px;
+  border-radius: var(--radius);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.fd-tab:hover { color: var(--text); border-color: var(--accent); }
+.fd-tab-active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.fd-canvas {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+}
+.fd-svg { width: 100%; height: auto; display: block; font-family: var(--font); }
+.fd-svg text { font-family: var(--font); }
+.fd-edge { stroke: #8a8fa3; stroke-width: 2; fill: none; }
+.fd-title { fill: #fff; font-weight: 700; font-size: 15px; }
+.fd-sub { fill: rgba(255, 255, 255, 0.72); font-size: 12px; }
+.fd-label { fill: var(--text-muted); font-size: 12px; }
+
 /* ─── Botón descargar Excel ──────────────────────────────────────────────── */
 .summary-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .btn-excel {

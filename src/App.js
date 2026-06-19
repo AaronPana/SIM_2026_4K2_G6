@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { ejecutarSimulacion, DEFAULT_PARAMS } from "./simulation/motor.js";
 import { exportarSimulacionExcel } from "./simulation/exportExcel.js";
+import Diagramas from "./Diagramas.js";
 import "./App.css";
 
 // ─── Componentes de UI ──────────────────────────────────────────────────────
@@ -479,6 +480,16 @@ function Presentacion({ onComenzar }) {
             </article>
           </Reveal>
         </div>
+      </section>
+
+      {/* Diagramas de flujo */}
+      <section className="pres-section">
+        <h2 className="pres-section-title">🔀 Diagramas de flujo</h2>
+        <p className="pres-section-lead">
+          Cómo se mueve una persona por el sistema, según su motivo de visita. Elegí un
+          flujo para verlo.
+        </p>
+        <Diagramas />
       </section>
 
       {/* Reglas y variables */}
