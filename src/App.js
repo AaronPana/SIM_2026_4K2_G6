@@ -396,10 +396,75 @@ function Reveal({ children, dir = "up", className = "" }) {
 }
 
 function Presentacion({ onComenzar }) {
+  const deckRef = useRef(null);
+  const [idx, setIdx] = useState(0);
+  const [total, setTotal] = useState(1);
+
+  useEffect(() => {
+    const deck = deckRef.current;
+    if (!deck) return;
+    const getSlides = () => Array.from(deck.querySelectorAll(".slide"));
+    setTotal(getSlides().length);
+
+    const indiceActual = () => {
+      const slides = getSlides();
+      const ref = deck.getBoundingClientRect().top;
+      let best = Infinity;
+      let bi = 0;
+      slides.forEach((el, i) => {
+        const d = Math.abs(el.getBoundingClientRect().top - ref);
+        if (d < best) {
+          best = d;
+          bi = i;
+        }
+      });
+      return bi;
+    };
+    const irAIndice = (i) => {
+      const slides = getSlides();
+      const c = Math.max(0, Math.min(slides.length - 1, i));
+      slides[c]?.scrollIntoView({ behavior: "smooth" });
+    };
+    const onKey = (e) => {
+      if (["ArrowDown", "ArrowRight", "PageDown"].includes(e.key)) {
+        e.preventDefault();
+        irAIndice(indiceActual() + 1);
+      } else if (["ArrowUp", "ArrowLeft", "PageUp"].includes(e.key)) {
+        e.preventDefault();
+        irAIndice(indiceActual() - 1);
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        irAIndice(0);
+      } else if (e.key === "End") {
+        e.preventDefault();
+        irAIndice(getSlides().length - 1);
+      }
+    };
+    let raf = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => setIdx(indiceActual()));
+    };
+    window.addEventListener("keydown", onKey);
+    deck.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      deck.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  const irASlide = (i) => {
+    const deck = deckRef.current;
+    if (!deck) return;
+    const slides = Array.from(deck.querySelectorAll(".slide"));
+    slides[i]?.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
-    <div className="presentacion">
+    <div className="presentacion deck" ref={deckRef}>
       {/* Hero */}
-      <section className="pres-hero">
+      <section className="pres-hero slide">
         <div className="pres-hero-badge">UTN FRC · Simulación 2026 · 4K2 · Grupo 6</div>
         <h1 className="pres-hero-title">
           📚 Simulación de una <span className="pres-accent">Biblioteca pública</span>
@@ -416,7 +481,7 @@ function Presentacion({ onComenzar }) {
       </section>
 
       {/* El caso */}
-      <section className="pres-section">
+      <section className="pres-section slide">
         <Reveal dir="up">
           <h2 className="pres-section-title">🏛️ El caso: la Biblioteca</h2>
           <p className="pres-section-lead">
@@ -483,7 +548,7 @@ function Presentacion({ onComenzar }) {
       </section>
 
       {/* Diagramas de flujo */}
-      <section className="pres-section">
+      <section className="pres-section slide">
         <h2 className="pres-section-title">🔀 Diagramas de flujo</h2>
         <p className="pres-section-lead">
           Cómo se mueve una persona por el sistema, según su motivo de visita. Elegí un
@@ -493,7 +558,7 @@ function Presentacion({ onComenzar }) {
       </section>
 
       {/* Reglas y variables */}
-      <section className="pres-section">
+      <section className="pres-section slide">
         <h2 className="pres-section-title">🎲 Reglas y variables aleatorias</h2>
         <p className="pres-section-lead">
           Cada demora del sistema se modela con una distribución de probabilidad. La
@@ -548,7 +613,7 @@ function Presentacion({ onComenzar }) {
       </section>
 
       {/* Objetivos y métricas */}
-      <section className="pres-section">
+      <section className="pres-section slide">
         <h2 className="pres-section-title">🎯 Objetivos y métricas</h2>
         <p className="pres-section-lead">
           El objetivo es estudiar el comportamiento del sistema corriendo la simulación
@@ -581,6 +646,19 @@ function Presentacion({ onComenzar }) {
           </button>
         </div>
       </section>
+
+      {/* Navegación tipo slides */}
+      <div className="deck-dots">
+        {Array.from({ length: total }).map((_, i) => (
+          <button
+            key={i}
+            className={`deck-dot ${i === idx ? "is-active" : ""}`}
+            onClick={() => irASlide(i)}
+            aria-label={`Ir a la slide ${i + 1}`}
+          />
+        ))}
+      </div>
+      <div className="deck-hint">↑ ↓ para navegar · {idx + 1}/{total}</div>
     </div>
   );
 }
