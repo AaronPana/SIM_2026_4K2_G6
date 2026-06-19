@@ -346,14 +346,19 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  max-width: 1040px;
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 56px 32px;
+  padding: 40px 32px;
   box-sizing: border-box;
 }
 .deck .pres-hero,
 .deck .pres-section { margin-bottom: 0; }
-.deck .fd-svg { max-height: 62vh; }
+/* En modo slide, títulos y bajadas más compactos para ganar espacio */
+.slide .pres-section-title { margin-bottom: 6px; padding-bottom: 10px; }
+.slide .pres-section-lead { margin: 10px 0 16px; }
+.deck .fd-svg { max-height: 60vh; }
+.deck .fd-canvas { padding: 12px; }
+.deck .fd-tabs { margin-bottom: 12px; }
 
 .deck-dots {
   position: fixed;
@@ -535,26 +540,23 @@ body {
 .reveal.is-visible { opacity: 1; transform: none; }
 
 /* ─── El caso: secuencia narrativa ───────────────────────────────────────── */
-.pres-caso { position: relative; max-width: 780px; margin: 18px auto 0; display: flex; flex-direction: column; gap: 26px; }
-.pres-caso::before {
-  content: "";
-  position: absolute;
-  left: 39px;
-  top: 28px;
-  bottom: 28px;
-  width: 2px;
-  background: linear-gradient(var(--accent), var(--accent2));
-  opacity: 0.25;
+.pres-caso {
+  position: relative;
+  max-width: 1000px;
+  margin: 14px auto 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
 }
 .caso-step {
   display: flex;
-  gap: 22px;
+  gap: 20px;
   align-items: flex-start;
   background: var(--surface);
   border: 1px solid var(--border);
   border-left: 3px solid var(--accent);
   border-radius: var(--radius);
-  padding: 22px 26px;
+  padding: 22px 24px;
   position: relative;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
@@ -569,5 +571,6 @@ body {
 }
 @media (max-width: 720px) {
   .pres-grid { grid-template-columns: 1fr; }
+  .pres-caso { grid-template-columns: 1fr; }
   .pres-hero-title { font-size: 32px; }
 }
