@@ -994,7 +994,7 @@ export default function App() {
                         min={0}
                         max={filas.length}
                         onChange={(e) =>
-                          setDesde(Math.max(0, parseInt(e.target.value) || 1))
+                          setDesde(Math.max(0, parseInt(e.target.value) || 0))
                         }
                       />
                     </label>

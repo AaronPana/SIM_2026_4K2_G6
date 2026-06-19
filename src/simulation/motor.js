@@ -361,11 +361,12 @@ export function ejecutarSimulacion(params) {
 
     // Identificar próximo evento
     const evento = proximoEvento(personasEnSistema);
-    reloj = parseFloat(evento.tiempo.toFixed(2));
+    reloj = evento.tiempo;
+
 
     let filaEvento = {
       iteracion,
-      reloj,
+      reloj: parseFloat(reloj.toFixed(4)),
       evento: evento.tipo,
       eventoPersonaId: evento.personaId || null,
       // llegada
@@ -628,7 +629,7 @@ export function ejecutarSimulacion(params) {
     // Adicional 2: Cantidad promedio de clientes en cola (Little: área bajo curva / tiempo total)
     cantidadPromedioClientesEnCola:
       tiempoSimulacion > 0
-        ? parseFloat((sumaTiemposEnCola / tiempoSimulacion).toFixed(2))
+        ? parseFloat((sumaTiemposEnCola / tiempoSimulacion).toFixed(4))
         : 0,
 
     // Adicional 3: Tiempo máximo de permanencia en cola
@@ -638,7 +639,7 @@ export function ejecutarSimulacion(params) {
     tiempoMinimoPermanenciaEnBiblioteca:
       tiempoMinPermanenciaEnBiblioteca === Infinity
         ? 0
-        : parseFloat(tiempoMinPermanenciaEnBiblioteca.toFixed(2)),
+        : parseFloat(tiempoMinPermanenciaEnBiblioteca.toFixed(4)),
 
     // Adicional 5: Cantidad de personas que se quedan a leer
     cantidadPersonasQueSeQuedaronALeer: totalSeQuedaronALeer,
