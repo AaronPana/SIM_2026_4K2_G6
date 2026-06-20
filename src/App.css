@@ -446,26 +446,39 @@ body {
 .presentacion { max-width: 1040px; margin: 0 auto; padding: 48px 24px 80px; }
 .pres-hero {
   text-align: center;
-  padding: 56px 24px 48px;
-  background: radial-gradient(1200px 400px at 50% -10%, rgba(59,91,219,0.10), transparent 70%);
-  border-radius: 18px;
-  margin-bottom: 40px;
+  align-items: center;
+  padding: 40px 24px;
+  background: radial-gradient(900px 360px at 50% 28%, rgba(59,91,219,0.10), transparent 70%);
 }
 .pres-hero-badge {
-  display: inline-block;
   font-family: var(--mono);
   font-size: 12px;
   letter-spacing: 0.5px;
   color: var(--accent);
   background: rgba(59,91,219,0.08);
   border: 1px solid var(--border);
-  padding: 6px 14px;
+  padding: 6px 16px;
   border-radius: 999px;
-  margin-bottom: 22px;
+  margin-bottom: 26px;
 }
-.pres-hero-title { font-size: 42px; font-weight: 800; letter-spacing: -1px; line-height: 1.1; margin: 0 0 18px; }
+.pres-hero-title { font-size: 46px; font-weight: 800; letter-spacing: -1px; line-height: 1.1; margin: 0 0 16px; }
 .pres-accent { color: var(--accent); }
-.pres-hero-sub { max-width: 680px; margin: 0 auto 28px; font-size: 17px; line-height: 1.6; color: var(--text-muted); }
+.pres-hero-sub { max-width: 560px; margin: 0 auto 26px; font-size: 17px; line-height: 1.6; color: var(--text-muted); }
+
+.hero-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 34px; }
+.hero-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 9px 16px;
+  border-radius: 999px;
+  box-shadow: 0 1px 2px rgba(24,26,34,0.04);
+}
 .pres-cta {
   background: linear-gradient(135deg, var(--accent), var(--accent2));
   color: #fff;

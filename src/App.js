@@ -470,11 +470,15 @@ function Presentacion({ onComenzar }) {
           📚 Simulación de una <span className="pres-accent">Biblioteca pública</span>
         </h1>
         <p className="pres-hero-sub">
-          Modelo de <strong>simulación de eventos discretos</strong> del mostrador de
-          atención de una biblioteca: dos empleados, una cola de espera, una sala de
-          lectura y control de aforo. Antes de meternos en el simulador, pongamos en
-          contexto el caso que nos tocó.
+          Un modelo de <strong>simulación de eventos discretos</strong> del mostrador de
+          atención.
         </p>
+        <div className="hero-chips">
+          <span className="hero-chip">👥 2 empleados</span>
+          <span className="hero-chip">⏳ Cola FIFO</span>
+          <span className="hero-chip">📖 Sala de lectura</span>
+          <span className="hero-chip">🚪 Aforo 20</span>
+        </div>
         <button className="pres-cta" onClick={onComenzar}>
           Ir a la simulación →
         </button>
